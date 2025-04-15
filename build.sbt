@@ -30,7 +30,8 @@ lazy val root = (project in file("."))
       "org.bouncycastle" % "bcpkix-jdk18on" % "1.80",
 
       // Testing (ScalaTest)
-      "org.scalatest" %% "scalatest" % "3.2.19" % Test
+      "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+      "org.scalatestplus" %% "mockito-4-11" % "3.2.18.0" % Test,
     ),
 
     // --- Compiler Options ---

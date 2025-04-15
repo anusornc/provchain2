@@ -14,8 +14,7 @@ class InMemoryBlockRepositorySpec extends BaseSpec with BeforeAndAfterEach {
   // ใช้ beforeEach เพื่อสร้าง instance ใหม่และ clear ข้อมูลก่อนแต่ละ test
   override def beforeEach(): Unit = {
     repository = new InMemoryBlockRepository()
-    // อาจจะไม่จำเป็นถ้าสร้าง new ทุกครั้ง แต่ใส่ไว้เพื่อความชัวร์
-    repository.clearAll()
+    repository.clearAll() // เคลียร์ข้อมูลเพื่อให้แต่ละ test ไม่ปนกัน
   }
 
   // --- Helper Data for Tests ---
@@ -110,7 +109,7 @@ class InMemoryBlockRepositorySpec extends BaseSpec with BeforeAndAfterEach {
       // Height 2
       val height2Result = repository.getBlocksByHeight(2L)
       height2Result should be(Symbol("right"))
-      // Use contain theSameElementsAs because order might not be guaranteed in TrieMap retrieval
+      // ใช้ contain theSameElementsAs เพราะลำดับอาจไม่แน่นอน
       height2Result.getOrElse(List.empty) should contain theSameElementsAs List(block2, block3)
 
       // Height 3
@@ -138,8 +137,7 @@ class InMemoryBlockRepositorySpec extends BaseSpec with BeforeAndAfterEach {
       repository.addTipHash("tip2") should be(Right(()))
       repository.getTipHashes().getOrElse(List.empty) should contain theSameElementsAs List("tip1", "tip2")
 
-      // Adding the same tip again should have no effect on the list (it's a set)
-      repository.addTipHash("tip1") should be(Right(()))
+      repository.addTipHash("tip1") should be(Right(())) // Adding same again
       repository.getTipHashes().getOrElse(List.empty) should contain theSameElementsAs List("tip1", "tip2")
     }
 
