@@ -46,3 +46,4 @@ logs/
 
 # --- Data (Consider if this should be committed or not) ---
 # data/
+target/

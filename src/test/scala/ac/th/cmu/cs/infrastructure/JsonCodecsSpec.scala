@@ -4,6 +4,7 @@ import ac.th.cmu.cs.BaseSpec
 import ac.th.cmu.cs.core.model._
 import io.circe.parser._
 import io.circe.syntax._ // Enables .asJson method
+import io.circe.DecodingFailure // <--- เพิ่ม Import
 import java.time.Instant
 
 // Import the codecs into scope
@@ -15,7 +16,6 @@ class JsonCodecsSpec extends BaseSpec {
 
     "correctly encode and decode Transaction" in {
       val now = Instant.now()
-      // Create a reasonably complex transaction
       val entity = ProvEntityInfo("ent-1", "MilkBatch", Map("farm" -> "Farm A"))
       val activity = ProvActivityInfo("act-1", "Milking", Some(now.minusSeconds(60)), Some(now), Some("Barn 3"))
       val agent = ProvAgentInfo("agent-1", "Farmer", Some("Mr. Jones"))
@@ -31,19 +31,14 @@ class JsonCodecsSpec extends BaseSpec {
         publicKey = "json-pk-456"
       )
 
-      // Encode to JSON string
-      val jsonString: String = originalTx.asJson.noSpaces // .noSpaces for compact string output
+      val jsonString: String = originalTx.asJson.noSpaces
+      val decodeResult = decode[Transaction](jsonString) // <--- แก้ไข: เอา Type Annotation ออก
 
-      // Decode back from JSON string
-      val decodeResult: Either[Error, Transaction] = decode[Transaction](jsonString)
-
-      // Assertions
-      decodeResult should be(Symbol("right")) // Check decoding was successful
+      decodeResult should be(Symbol("right"))
       decodeResult.foreach { decodedTx =>
-        decodedTx shouldBe originalTx // Check if the decoded object equals the original
-        // Optionally check specific fields again
+        decodedTx shouldBe originalTx
         decodedTx.id shouldBe "tx-json-test"
-        decodedTx.timestamp shouldBe now // Instant comparison should work
+        decodedTx.timestamp shouldBe now
         decodedTx.provEntity shouldBe Some(entity)
         decodedTx.provActivity.flatMap(_.startTime) shouldBe Some(now.minusSeconds(60))
         decodedTx.attributes("weather") shouldBe "Sunny"
@@ -64,22 +59,17 @@ class JsonCodecsSpec extends BaseSpec {
         height = 101L,
         validator = "validator-json-pk",
         signature = "blocksig-json-test",
-        supplyChainType = None, // Test Option None case
+        supplyChainType = None,
         dagWeight = 1000L,
         metadata = Map("region" -> "North", "processed_by" -> "NodeX")
       )
 
-      // Encode to JSON string
       val jsonString: String = originalBlock.asJson.noSpaces
+      val decodeResultBlock = decode[Block](jsonString) // <--- แก้ไข: เอา Type Annotation ออก และเปลี่ยนชื่อ
 
-      // Decode back from JSON string
-      val decodeResult: Either[Error, Block] = decode[Block](jsonString)
-
-      // Assertions
-      decodeResult should be(Symbol("right"))
-      decodeResult.foreach { decodedBlock =>
-        decodedBlock shouldBe originalBlock // Check full object equality
-        // Optionally check specific fields
+      decodeResultBlock should be(Symbol("right"))
+      decodeResultBlock.foreach { decodedBlock =>
+        decodedBlock shouldBe originalBlock
         decodedBlock.hash shouldBe "blockhash-json-test"
         decodedBlock.prevHashes should contain theSameElementsAs List("prev1", "prev2")
         decodedBlock.transactions.size shouldBe 2
@@ -93,12 +83,11 @@ class JsonCodecsSpec extends BaseSpec {
 
     "fail decoding with invalid JSON structure" in {
       val invalidJson = """{"id":"tx-invalid","timestamp":"not-a-date"}"""
-      val decodeResult = decode[Transaction](invalidJson)
+      val decodeResultInvalid = decode[Transaction](invalidJson) // <--- แก้ไข: เปลี่ยนชื่อตัวแปร
 
-      decodeResult should be(Symbol("left")) // Check decoding failed
-      decodeResult.left.foreach { error =>
-        // You can add more specific error checking if needed
-        error shouldBe a[DecodingFailure]
+      decodeResultInvalid should be(Symbol("left"))
+      decodeResultInvalid.left.foreach { error =>
+         error.isInstanceOf[DecodingFailure] shouldBe true // <--- แก้ไข: ใช้วิธีตรวจสอบ Type แบบนี้
       }
     }
   }

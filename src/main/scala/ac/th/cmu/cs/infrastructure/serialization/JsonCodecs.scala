@@ -3,7 +3,6 @@ package ac.th.cmu.cs.infrastructure.serialization
 import ac.th.cmu.cs.core.model._ // Import model classes
 import io.circe._
 import io.circe.generic.semiauto._
-import io.circe.java8.time._ // Import codecs for java.time (Instant)
 
 /**
  * กำหนด JSON Encoders และ Decoders สำหรับ Data Models โดยใช้ Circe

@@ -1,5 +1,6 @@
 package ac.th.cmu.cs.core.crypto
 
+import ac.th.cmu.cs.infrastructure.crypto.CryptoUtils // Import utility object
 import java.nio.charset.{Charset, StandardCharsets}
 
 /**
@@ -21,23 +22,8 @@ trait HashingService {
    * @return String ที่เป็น Hex Representation ของ Hash หรือ Left(HashingError)
    */
   def hashString(input: String, charset: Charset = StandardCharsets.UTF_8): Either[CryptoError.HashingError, String] = {
-    hashBytes(input.getBytes(charset)).map(bytesToHexString)
+    // เรียกใช้ hashBytes แล้วแปลงผลด้วย CryptoUtils
+    hashBytes(input.getBytes(charset)).map(CryptoUtils.bytesToHexString)
   }
 
-  // --- Helper ---
-  // อาจจะย้ายไปไว้ใน Utility Object แยกต่างหาก
-  protected def bytesToHexString(bytes: Array[Byte]): String = {
-    bytes.map("%02x".format(_)).mkString
-  }
-
-  protected def hexStringToBytes(hex: String): Either[IllegalArgumentException, Array[Byte]] = {
-    try {
-      // Ensure hex string has even length by padding with 0 if necessary
-      val paddedHex = if (hex.length % 2 != 0) "0" + hex else hex
-      Right(paddedHex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte))
-    } catch {
-      case e: NumberFormatException => Left(new IllegalArgumentException(s"Invalid hex string: $hex", e))
-      case e: Exception => Left(new IllegalArgumentException(s"Error parsing hex string: $hex", e))
-    }
-  }
 }
