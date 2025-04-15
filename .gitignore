@@ -1,0 +1,48 @@
+# --- Scala / sbt ---
+.bloop/
+.metals/
+.sbt/           # User-specific sbt configuration
+target/         # Compiled classes and packaged artifacts
+project/project/
+project/target/
+build.sbt.lock
+
+# --- IDEs ---
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code
+.vscode/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# --- OS Generated Files ---
+# Mac OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Temporary Files ---
+*~
+*.swp
+*.swo
+
+# --- Data (Consider if this should be committed or not) ---
+# data/
