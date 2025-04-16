@@ -1,69 +1,83 @@
 package ac.th.cmu.cs.core.model
 
 import java.time.Instant
+import java.nio.charset.StandardCharsets
+import scala.util.Try
+// Import Circe stuff needed for creating JSON manually and the printer
+import io.circe.{Json, Printer}
+import io.circe.syntax._
+// Import implicit codecs defined elsewhere, assuming they are in scope via infrastructure
+// Note: This might create a circular dependency if Transaction uses JsonCodecs which uses Transaction.
+// A better approach might be to define basic encoders here or pass the printer/encoders explicitly.
+// For simplicity now, we assume codecs are available. Consider refactoring later.
+import ac.th.cmu.cs.infrastructure.serialization.JsonCodecs._
 
-/**
- * แสดงถึง Transaction หนึ่งรายการในระบบ ProvChain ซึ่งควรจะสอดคล้องกับ PROV-O Model
- *
- * @param id              Unique identifier ของ Transaction นี้
- * @param timestamp       เวลาที่ Transaction ถูกสร้างหรือบันทึก
- * @param transactionType ประเภทของ Transaction (เช่น 'CREATE_BATCH', 'TRANSFER', 'PROCESS')
- * @param provEntity      (Optional) ข้อมูลเกี่ยวกับ PROV-O Entity ที่เกี่ยวข้อง (อาจเป็น ID หรือ Object ซ้อน)
- * @param provActivity    (Optional) ข้อมูลเกี่ยวกับ PROV-O Activity ที่เกี่ยวข้อง (อาจเป็น ID หรือ Object ซ้อน)
- * @param provAgent       (Optional) ข้อมูลเกี่ยวกับ PROV-O Agent ที่เกี่ยวข้อง (อาจเป็น ID หรือ Object ซ้อน)
- * @param attributes      ข้อมูลเพิ่มเติมอื่นๆ ในรูปแบบ Key-Value
- * @param signature       ลายเซ็นดิจิทัลของผู้สร้าง Transaction (ควรใช้ Vector[Byte])
- * @param publicKey       Public Key ของผู้สร้าง Transaction (ควรใช้ Vector[Byte])
- */
+
+// --- case class Transaction และอื่นๆ เหมือนเดิม ---
 case class Transaction(
   id: String,
   timestamp: Instant,
   transactionType: String,
-  // --- PROV-O Related Fields (ตัวอย่าง - ต้องปรับตามความต้องการ) ---
-  // อาจจะเก็บเป็น ID หรือเป็น Nested Case Class ก็ได้
   provEntity: Option[ProvEntityInfo],
   provActivity: Option[ProvActivityInfo],
   provAgent: Option[ProvAgentInfo],
-  // --- End PROV-O ---
-  attributes: Map[String, String], // สำหรับข้อมูลอื่นๆ ที่ไม่ตายตัว
-  signature: String, // พิจารณา: Vector[Byte] หรือ type Signature
-  publicKey: String // พิจารณา: Vector[Byte] หรือ type PublicKey
+  attributes: Map[String, String],
+  publicKey: String, // Public Key ของผู้สร้าง Tx
+  signature: String  // Signature ของ Tx นี้ (จะไม่ถูกรวมตอน Hash Tx)
 )
 
-// --- ตัวอย่าง Nested Case Classes สำหรับ PROV-O (อาจแยกไฟล์ได้) ---
-
-/** ข้อมูลเบื้องต้นเกี่ยวกับ PROV-O Entity */
 case class ProvEntityInfo(
   id: String,
-  entityType: String, // เช่น 'MilkBatch', 'UHTPackage'
-  // สามารถเพิ่ม attributes เฉพาะของ Entity ได้
+  entityType: String,
   details: Map[String, String] = Map.empty
 )
-
-/** ข้อมูลเบื้องต้นเกี่ยวกับ PROV-O Activity */
+// ProvActivityInfo, ProvAgentInfo เหมือนเดิม...
 case class ProvActivityInfo(
   id: String,
-  activityType: String, // เช่น 'Milking', 'Pasteurization', 'Packaging'
+  activityType: String,
   startTime: Option[Instant] = None,
   endTime: Option[Instant] = None,
   location: Option[String] = None
-  // สามารถเพิ่ม attributes เฉพาะของ Activity ได้
 )
-
-/** ข้อมูลเบื้องต้นเกี่ยวกับ PROV-O Agent */
 case class ProvAgentInfo(
   id: String,
-  agentType: String, // เช่น 'Farmer', 'Processor', 'Distributor'
+  agentType: String,
   name: Option[String] = None
-  // สามารถเพิ่ม attributes เฉพาะของ Agent ได้
 )
-
-// Companion Object (ถ้าต้องการ)
-object Transaction {
-  // อาจจะมี Type Alias หรือ Factory methods
-}
-
-// Companion Objects for nested classes (ถ้าต้องการ)
 object ProvEntityInfo {}
 object ProvActivityInfo {}
 object ProvAgentInfo {}
+
+
+// --- เพิ่ม Companion Object และ Helper Method ---
+object Transaction {
+
+  // ใช้ Printer เดียวกับ Block Validation เพื่อความ Consistent
+  // Note: การมี Printer อยู่ตรงนี้อาจจะไม่ใช่ design ที่ดีที่สุด อาจจะต้อง Refactor
+  private val canonicalJsonPrinter: Printer = Printer.noSpaces.copy(sortKeys = true)
+
+  /**
+   * สร้าง Byte Array สำหรับ Transaction เพื่อนำไป Hash (Canonical Representation)
+   * จะไม่รวมเอา field 'signature' เข้ามาในการคำนวณ
+   * @param tx Transaction ที่ต้องการแปลง
+   * @return Right(Array[Byte]) หรือ Left(Throwable) ถ้าการสร้าง JSON ล้มเหลว
+   */
+  def getBytesForHashing(tx: Transaction): Either[Throwable, Array[Byte]] = {
+    Try {
+      // สร้าง JSON object โดยเลือก field ที่ต้องการและเรียง Key
+      val jsonForHashing = Json.obj(
+        "id" -> tx.id.asJson,
+        "timestamp" -> tx.timestamp.toEpochMilli.asJson, // ใช้ Epoch Millis เพื่อความแน่นอน
+        "transactionType" -> tx.transactionType.asJson,
+        "provEntity" -> tx.provEntity.asJson, // ต้องการ Encoder สำหรับ Option[ProvEntityInfo]
+        "provActivity" -> tx.provActivity.asJson, // ต้องการ Encoder สำหรับ Option[ProvActivityInfo]
+        "provAgent" -> tx.provAgent.asJson, // ต้องการ Encoder สำหรับ Option[ProvAgentInfo]
+        "attributes" -> tx.attributes.asJson, // ต้องการ Encoder สำหรับ Map[String, String]
+        "publicKey" -> tx.publicKey.asJson
+        // ไม่รวม tx.signature
+      )
+      // แปลงเป็น JSON String แล้วเอา Bytes
+      canonicalJsonPrinter.print(jsonForHashing).getBytes(StandardCharsets.UTF_8)
+    }.toEither // แปลง Try เป็น Either
+  }
+}

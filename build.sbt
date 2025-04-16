@@ -29,6 +29,9 @@ lazy val root = (project in file("."))
       "org.bouncycastle" % "bcprov-jdk18on" % "1.80",
       "org.bouncycastle" % "bcpkix-jdk18on" % "1.80",
 
+      // RocksDB JNI driver
+      "org.rocksdb" % "rocksdbjni" % "9.10.0", // <-- เพิ่มบรรทัดนี้
+
       // Testing (ScalaTest)
       "org.scalatest" %% "scalatest" % "3.2.19" % Test,
       "org.scalatestplus" %% "mockito-4-11" % "3.2.18.0" % Test,

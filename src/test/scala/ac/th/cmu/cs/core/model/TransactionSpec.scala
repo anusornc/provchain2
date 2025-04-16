@@ -6,9 +6,12 @@ import java.time.Instant
 class TransactionSpec extends BaseSpec {
 
   "Transaction case class" should {
-    "be creatable with basic fields" in {
+    "be creatable with basic fields including signature and public key" in { // <--- Update description slightly
       val now = Instant.now()
       val entityInfo = ProvEntityInfo("entity:123", "MilkBatch", Map("volume" -> "1000L"))
+      // เพิ่ม publicKey และ signature เข้าไปตอนสร้าง
+      val pk = "test-public-key-123"
+      val sig = "test-signature-abc"
       val tx = Transaction(
         id = "tx-abc",
         timestamp = now,
@@ -17,8 +20,8 @@ class TransactionSpec extends BaseSpec {
         provActivity = None,
         provAgent = None,
         attributes = Map("location" -> "Farm A"),
-        signature = "dummy-signature",
-        publicKey = "dummy-pubkey"
+        publicKey = pk, // <-- Field ใหม่
+        signature = sig   // <-- Field ใหม่
       )
 
       tx.id shouldBe "tx-abc"
@@ -26,8 +29,8 @@ class TransactionSpec extends BaseSpec {
       tx.transactionType shouldBe "CREATE_BATCH"
       tx.provEntity shouldBe Some(entityInfo)
       tx.attributes("location") shouldBe "Farm A"
-      tx.signature shouldBe "dummy-signature"
-      tx.publicKey shouldBe "dummy-pubkey"
+      tx.publicKey shouldBe pk // <--- เพิ่ม Assertion
+      tx.signature shouldBe sig   // <--- เพิ่ม Assertion
     }
 
     // TODO: Add more tests for:

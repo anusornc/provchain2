@@ -4,7 +4,7 @@ import ac.th.cmu.cs.BaseSpec
 import ac.th.cmu.cs.core.model._
 import ac.th.cmu.cs.core.persistence.PersistenceError
 import java.time.Instant
-import org.scalatest.BeforeAndAfterEach // Import สำหรับ beforeEach
+import org.scalatest.BeforeAndAfterEach
 
 class InMemoryBlockRepositorySpec extends BaseSpec with BeforeAndAfterEach {
 
@@ -19,21 +19,25 @@ class InMemoryBlockRepositorySpec extends BaseSpec with BeforeAndAfterEach {
 
   // --- Helper Data for Tests ---
   val now: Instant = Instant.now()
-  def createTestTx(id: String, time: Instant = now): Transaction =
-    Transaction(id, time, s"TYPE_$id", None, None, None, Map("attr" -> id), s"sig_$id", s"pk_$id")
+  // แก้ไข helper นี้ ให้รับ/สร้าง pk, sig
+  def createTestTx(id: String, time: Instant = now, pk: String = "dummy-pk", sig: String = "dummy-sig"): Transaction =
+    Transaction(id, time, s"TYPE_$id", None, None, None, Map("attr" -> id), pk, sig) // <-- เพิ่ม pk, sig
 
+  // createTestBlock ไม่ต้องแก้ เพราะรับ List[Transaction]
   def createTestBlock(hash: String, height: Long, prev: List[String], txs: List[Transaction], time: Instant = now): Block =
     Block(hash, prev, txs, s"mr_$hash", time, height, s"val_$hash", s"sig_$hash", Some(s"SUPPLY_$hash"), height * 10, Map("meta" -> hash))
 
-  val tx1: Transaction = createTestTx("tx1", now.minusSeconds(10))
-  val tx2: Transaction = createTestTx("tx2", now.minusSeconds(5))
-  val tx3: Transaction = createTestTx("tx3", now)
+  // อัปเดตการสร้าง tx ตัวอย่าง
+  val tx1: Transaction = createTestTx("tx1", now.minusSeconds(10), "pk1", "sig1")
+  val tx2: Transaction = createTestTx("tx2", now.minusSeconds(5), "pk2", "sig2")
+  val tx3: Transaction = createTestTx("tx3", now, "pk3", "sig3")
 
+  // อัปเดตการสร้าง block ตัวอย่าง (ใช้ tx ที่อัปเดตแล้ว)
   val block1: Block = createTestBlock("h1", 1L, List("h0"), List(tx1), now.minusSeconds(20))
   val block2: Block = createTestBlock("h2", 2L, List("h1"), List(tx2), now.minusSeconds(10))
-  val block3: Block = createTestBlock("h3", 2L, List("h1"), List(tx3), now.minusSeconds(5)) // Height เดียวกับ block2
-  val block4: Block = createTestBlock("h4", 3L, List("h2", "h3"), List(), now)
-  // --- End Helper Data ---
+  val block3: Block = createTestBlock("h3", 2L, List("h1"), List(tx3), now.minusSeconds(5))
+  val block4: Block = createTestBlock("h4", 3L, List("h2", "h3"), List(), now) // Block นี้ไม่มี tx ไม่ต้องแก้
+  // --- End Helper Data & Updates ---
 
 
   "InMemoryBlockRepository" should {
@@ -82,8 +86,9 @@ class InMemoryBlockRepositorySpec extends BaseSpec with BeforeAndAfterEach {
 
      "find the latest transaction if multiple blocks contain the same tx ID (last write wins)" in {
       val txDuplicateId = "tx-dup"
-      val txV1 = createTestTx(txDuplicateId, now.minusSeconds(10)).copy(attributes = Map("version" -> "1"))
-      val txV2 = createTestTx(txDuplicateId, now.minusSeconds(5)).copy(attributes = Map("version" -> "2"))
+      // อัปเดตการสร้าง txV1, txV2
+      val txV1 = createTestTx(txDuplicateId, now.minusSeconds(10), "pkV1", "sigV1").copy(attributes = Map("version" -> "1"))
+      val txV2 = createTestTx(txDuplicateId, now.minusSeconds(5), "pkV2", "sigV2").copy(attributes = Map("version" -> "2"))
       val blockV1 = createTestBlock("hv1", 1L, List("h0"), List(txV1), now.minusSeconds(10))
       val blockV2 = createTestBlock("hv2", 2L, List("hv1"), List(txV2), now.minusSeconds(5))
 
